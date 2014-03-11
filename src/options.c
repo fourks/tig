@@ -508,10 +508,34 @@ option_set_command(int argc, const char *argv[])
 	return ERROR_UNKNOWN_VARIABLE_NAME;
 }
 
+static bool
+remap_binding(const char *remapped[][2], size_t remapped_size,
+	      char buf[], size_t buf_size, const char *argv[], int *argc)
+{
+	const char *arg = argv[2];
+	size_t arglen = strlen(arg);
+	int i;
+
+	for (i = 0; i < remapped_size; i++) {
+		const char *name = remapped[i][0];
+		size_t namelen = strlen(name);
+
+		if (arglen == namelen &&
+		    !string_enum_compare(arg, name, namelen)) {
+			string_ncopy_do(buf, buf_size, remapped[i][1], strlen(remapped[i][1]));
+			*argc = 2;
+			return argv_from_string(argv, argc, buf);
+		}
+	}
+
+	return TRUE;
+}
+
 /* Wants: mode request key */
 static enum status_code
 option_bind_command(int argc, const char *argv[])
 {
+	char remapped_buf[SIZEOF_STR];
 	struct key_input input;
 	enum request request;
 	struct keymap *keymap;
@@ -532,6 +556,23 @@ option_bind_command(int argc, const char *argv[])
 			ENUM_MAP_ENTRY("screen-resize",	REQ_NONE),
 			ENUM_MAP_ENTRY("tree-parent",		REQ_PARENT),
 		};
+		static const char *remapped[][2] = {
+			{ "toggle-author",		":toggle show-author" },
+			{ "toggle-changes",		":toggle show-changes" },
+			{ "toggle-commit-order",	":toggle show-commit-order" },
+			{ "toggle-date",		":toggle show-date" },
+			{ "toggle-file-size",		":toggle show-file-size" },
+			{ "toggle-filename",		":toggle show-filename" },
+			{ "toggle-graphic",		":toggle show-graphic" },
+			{ "toggle-id",			":toggle show-id" },
+			{ "toggle-ignore-space",	":toggle show-ignore-space" },
+			{ "toggle-lineno",		":toggle show-line-numbers" },
+			{ "toggle-refs",		":toggle show-refs" },
+			{ "toggle-rev-graph",		":toggle show-rev-graph" },
+			{ "toggle-title-overflow",	":toggle show-title-overflow" },
+			{ "toggle-untracked-dirs",	":toggle status-untracked-dirs" },
+			{ "toggle-vertical-split",	":toggle show-vertical-split" },
+		};
 		int alias;
 
 		if (map_enum(&alias, obsolete, argv[2])) {
@@ -539,6 +580,10 @@ option_bind_command(int argc, const char *argv[])
 				add_keybinding(keymap, alias, &input);
 			return ERROR_OBSOLETE_REQUEST_NAME;
 		}
+
+		if (!remap_binding(remapped, ARRAY_SIZE(remapped),
+				  remapped_buf, sizeof(remapped_buf), argv, &argc))
+			return ERROR_OBSOLETE_REQUEST_NAME;
 	}
 
 	if (request == REQ_UNKNOWN) {

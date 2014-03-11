@@ -70,36 +70,35 @@ view_request(struct view *view, enum request request)
 #define VIEW_FLAG_RESET_DISPLAY	((enum view_flag) -1)
 
 #define TOGGLE_MENU_INFO(_) \
-	_(LINENO,    '.', "line numbers",      &opt_show_line_numbers, NULL, VIEW_NO_FLAGS), \
-	_(DATE,      'D', "dates",             &opt_show_date, date_map, VIEW_NO_FLAGS), \
-	_(AUTHOR,    'A', "author",            &opt_show_author, author_map, VIEW_NO_FLAGS), \
-	_(GRAPHIC,   '~', "graphics",          &opt_line_graphics, graphic_map, VIEW_NO_FLAGS), \
-	_(REV_GRAPH, 'g', "revision graph",    &opt_show_rev_graph, NULL, VIEW_LOG_LIKE), \
-	_(FILENAME,  '#', "file names",        &opt_show_filename, filename_map, VIEW_NO_FLAGS), \
-	_(FILE_SIZE, '*', "file sizes",        &opt_show_file_size, file_size_map, VIEW_NO_FLAGS), \
-	_(IGNORE_SPACE, 'W', "space changes",  &opt_ignore_space, ignore_space_map, VIEW_DIFF_LIKE), \
-	_(COMMIT_ORDER, 'l', "commit order",   &opt_commit_order, commit_order_map, VIEW_LOG_LIKE), \
-	_(REFS,      'F', "reference display", &opt_show_refs, NULL, VIEW_NO_FLAGS), \
-	_(CHANGES,   'C', "local change display", &opt_show_changes, NULL, VIEW_NO_FLAGS), \
-	_(ID,        'X', "commit ID display", &opt_show_id, NULL, VIEW_NO_FLAGS), \
-	_(FILES,     '%', "file filtering",    &opt_file_filter, NULL, VIEW_DIFF_LIKE | VIEW_LOG_LIKE), \
-	_(TITLE_OVERFLOW, '$', "commit title overflow display", &opt_title_overflow, NULL, VIEW_NO_FLAGS), \
-	_(UNTRACKED_DIRS, 'd', "untracked directory info", &opt_status_untracked_dirs, NULL, VIEW_STATUS_LIKE), \
-	_(VERTICAL_SPLIT, '|', "view split",   &opt_vertical_split, vertical_split_map, VIEW_FLAG_RESET_DISPLAY), \
+	_('.', "line numbers",      &opt_show_line_numbers, NULL, VIEW_NO_FLAGS), \
+	_('D', "dates",             &opt_show_date, date_map, VIEW_NO_FLAGS), \
+	_('A', "author",            &opt_show_author, author_map, VIEW_NO_FLAGS), \
+	_('~', "graphics",          &opt_line_graphics, graphic_map, VIEW_NO_FLAGS), \
+	_('g', "revision graph",    &opt_show_rev_graph, NULL, VIEW_LOG_LIKE), \
+	_('#', "file names",        &opt_show_filename, filename_map, VIEW_NO_FLAGS), \
+	_('*', "file sizes",        &opt_show_file_size, file_size_map, VIEW_NO_FLAGS), \
+	_('W', "space changes",  &opt_ignore_space, ignore_space_map, VIEW_DIFF_LIKE), \
+	_('l', "commit order",   &opt_commit_order, commit_order_map, VIEW_LOG_LIKE), \
+	_('F', "reference display", &opt_show_refs, NULL, VIEW_NO_FLAGS), \
+	_('C', "local change display", &opt_show_changes, NULL, VIEW_NO_FLAGS), \
+	_('X', "commit ID display", &opt_show_id, NULL, VIEW_NO_FLAGS), \
+	_('%', "file filtering",    &opt_file_filter, NULL, VIEW_DIFF_LIKE | VIEW_LOG_LIKE), \
+	_('$', "commit title overflow display", &opt_title_overflow, NULL, VIEW_NO_FLAGS), \
+	_('d', "untracked directory info", &opt_status_untracked_dirs, NULL, VIEW_STATUS_LIKE), \
+	_('|', "view split",   &opt_vertical_split, vertical_split_map, VIEW_FLAG_RESET_DISPLAY), \
 
 static enum view_flag
 toggle_option(struct view *view, enum request request, char msg[SIZEOF_STR])
 {
 	const struct {
-		enum request request;
 		const struct enum_map *map;
 		enum view_flag reload_flags;
 	} data[] = {
-#define DEFINE_TOGGLE_DATA(id, key, help, value, map, vflags) { REQ_TOGGLE_ ## id, map, vflags  }
+#define DEFINE_TOGGLE_DATA(key, help, value, map, vflags) { map, vflags  }
 		TOGGLE_MENU_INFO(DEFINE_TOGGLE_DATA)
 	};
 	const struct menu_item menu[] = {
-#define DEFINE_TOGGLE_MENU(id, key, help, value, map, vflags) { key, help, value }
+#define DEFINE_TOGGLE_MENU(key, help, value, map, vflags) { key, help, value }
 		TOGGLE_MENU_INFO(DEFINE_TOGGLE_MENU)
 		{ 0 }
 	};
@@ -109,7 +108,7 @@ toggle_option(struct view *view, enum request request, char msg[SIZEOF_STR])
 		if (!prompt_menu("Toggle option", menu, &i))
 			return VIEW_NO_FLAGS;
 	} else {
-		while (i < ARRAY_SIZE(data) && data[i].request != request)
+		while (i < ARRAY_SIZE(data) && menu[i].data == &opt_file_filter)
 			i++;
 		if (i >= ARRAY_SIZE(data))
 			die("Invalid request (%d)", request);
@@ -332,21 +331,7 @@ view_driver(struct view *view, enum request request)
 		break;
 
 	case REQ_OPTIONS:
-	case REQ_TOGGLE_LINENO:
-	case REQ_TOGGLE_DATE:
-	case REQ_TOGGLE_AUTHOR:
-	case REQ_TOGGLE_FILENAME:
-	case REQ_TOGGLE_GRAPHIC:
-	case REQ_TOGGLE_REV_GRAPH:
-	case REQ_TOGGLE_REFS:
-	case REQ_TOGGLE_CHANGES:
-	case REQ_TOGGLE_IGNORE_SPACE:
-	case REQ_TOGGLE_ID:
 	case REQ_TOGGLE_FILES:
-	case REQ_TOGGLE_TITLE_OVERFLOW:
-	case REQ_TOGGLE_FILE_SIZE:
-	case REQ_TOGGLE_UNTRACKED_DIRS:
-	case REQ_TOGGLE_VERTICAL_SPLIT:
 		{
 			char action[SIZEOF_STR] = "";
 			enum view_flag flags = toggle_option(view, request, action);
@@ -704,6 +689,8 @@ run_prompt_command(struct view *view, const char *argv[])
 			next->dir = NULL;
 			open_view(view, REQ_VIEW_PAGER, OPEN_PREPARED);
 		}
+
+	} else if (!strcmp(cmd, "toggle")) {
 
 	} else {
 		request = get_request(cmd);
